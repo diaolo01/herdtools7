@@ -22,6 +22,8 @@ type 'op1 unop =
   | DBM (* get DBM from PTE entry *)
   | Valid (* get Valid bit from PTE entry *)
   | EL0 (* get EL0 bit from PTE entry *)
+  | Contig (* get contiguous bit from PTE *)
+  | SetContig (* set contiguous bit to 1 in PTE *)
   | OA (* get OA from PTE entry *)
   | Tagged (* get Tag attribute from PTE entry *)
   | CheckCanonical (* Check is a virtual address is canonical *)
@@ -68,6 +70,8 @@ module
       | DBM -> "DBM"
       | Valid -> "Valid"
       | EL0 -> "EL0"
+      | Contig -> "Contig"
+      | SetContig -> "SetContig"
       | OA -> "OA"
       | Tagged -> "Tagged"
       | CheckCanonical -> "CheckCanonical"
@@ -132,6 +136,10 @@ module
 
     let getel0 = op_get_pteval (fun p -> p.el0 <> 0)
 
+    let getcontig = op_get_pteval (fun p -> p.contig <> 0)
+
+    let setcontig = op_set_pteval (fun p -> { p with contig=1; })
+
     let gettagged = op_get_pteval (fun p -> Attrs.is_tagged p.attrs)
 
     let getoa v =
@@ -191,6 +199,8 @@ module
       | DBM -> getdbm
       | Valid -> getvalid
       | EL0 -> getel0
+      | Contig -> getcontig
+      | SetContig -> setcontig
       | OA -> getoa
       | Tagged -> gettagged
       | CheckCanonical -> checkCanonical
@@ -211,15 +221,17 @@ module
 
     let mask_valid = S.one
     let mask_el0 = S.shift_left S.one 6
+    let mask_contig = S.shift_left S.one 52
     let mask_db = S.shift_left S.one 7
     let mask_af = S.shift_left S.one 10
     let mask_dbm = S.shift_left S.one 51
     let mask_all_neg =
       S.lognot
         (S.logor mask_el0
-           (S.logor
-              (S.logor mask_valid  mask_db)
-              (S.logor  mask_af  mask_dbm)))
+          (S.logor mask_contig
+            (S.logor
+                (S.logor mask_valid  mask_db)
+                (S.logor  mask_af  mask_dbm))))
 
     let is_zero v = S.equal S.zero v
     let is_set v m = not (is_zero (S.logand v m))
@@ -229,6 +241,7 @@ module
       else
         let p = if is_set m mask_valid then { p with valid=1; } else p in
         let p = if is_set m mask_el0 then { p with el0=1; } else p in
+        let p = if is_set m mask_contig then { p with contig=1; } else p in
         let p = if is_set m mask_db then { p with db=0; } else p in
         let p = if is_set m mask_af then { p with af=1; } else p in
         let p = if is_set m mask_dbm then { p with dbm=1; } else p in
@@ -239,6 +252,7 @@ module
       else
         let p = if is_set m mask_valid then { p with valid=0; } else p in
         let p = if is_set m mask_el0 then { p with el0=0; } else p in
+        let p = if is_set m mask_contig then { p with contig=0; } else p in
         let p = if is_set m mask_db then { p with db=1; } else p in
         let p = if is_set m mask_af then { p with af=0; } else p in
         let p = if is_set m mask_dbm then { p with dbm=0; } else p in
@@ -252,6 +266,9 @@ module
       let r =
         if is_set m mask_el0 && p.el0=1
         then S.logor r mask_el0 else r  in
+      let r =
+        if is_set m mask_contig && p.contig=1
+        then S.logor r mask_contig else r  in
       let r =
         if is_set m mask_db && p.db=0;
         then S.logor r mask_db else r  in
