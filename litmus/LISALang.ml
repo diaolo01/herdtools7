@@ -93,6 +93,8 @@ module Make(V:Constant.S) = struct
     | Label _ -> Warn.user_error "No label value in LISA"
     | Tag _ -> Warn.user_error "No tag in LISA"
     | PteVal _ -> Warn.user_error "No pteval in LISA"
+    | BlockVal _ -> Warn.user_error "No blockval in LISA"
+    | TableVal _ -> Warn.user_error "No tableval in LISA"
     | Instruction _ -> Warn.user_error "No instruction value in LISA"
     | ConcreteRecord _ -> Warn.user_error "No record values in LISA"
     | Frozen _ -> assert false

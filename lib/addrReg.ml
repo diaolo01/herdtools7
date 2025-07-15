@@ -2,10 +2,10 @@
 (*                           the diy toolsuite                              *)
 (*                                                                          *)
 (* Jade Alglave, University College London, UK.                             *)
-(* Luc Maranget, INRIA Paris-Rocquencourt, France.                          *)
+(* Luc Maranget, INRIA Paris, France.                                       *)
 (*                                                                          *)
-(* Copyright 2024-present Institut National de Recherche en Informatique et *)
-(* en Automatique, ARM Ltd and the authors. All rights reserved.            *)
+(* Copyright 2021-present Institut National de Recherche en Informatique et *)
+(* en Automatique and the authors. All rights reserved.                     *)
 (*                                                                          *)
 (* This software is governed by the CeCILL-B license under French law and   *)
 (* abiding by the rules of distribution of free software. You can use,      *)
@@ -14,15 +14,43 @@
 (* "http://www.cecill.info". We also give a copy in LICENSE.txt.            *)
 (****************************************************************************)
 
-module Make (C : sig
-  val is_morello : bool
-end) : Value.AArch64 = struct
-  module AArch64Instr = AArch64Instr.Make (C)
-  module AArch64Cst =
-    SymbConstant.Make (SVEScalar) (AArch64PteVal) (AArch64BlockVal) (AArch64TableVal) (AArch64Instr)
-  module NoCst =
-    SymbConstant.Make (SVEScalar) (PteVal.No) (BlockVal.No) (TableVal.No) (AArch64Instr)
-  module NoArchOp = ArchOp.No(NoCst)
-  module AArch64Op = AArch64Op.Make (SVEScalar)(NoArchOp)
-  include SymbValue.Make (AArch64Cst) (AArch64Op)
+(** Abstract system register values *)
+module type S = sig
+  type t
+
+  val default : t
+
+  val pp : bool -> t -> string
+  val pp_v : t -> string
+  val tr : ParsedAddrReg.t -> t
+  val pp_norm : ParsedAddrReg.t -> string
+
+  val eq : t -> t -> bool
+  val compare : t -> t -> int
+
+  val dump_pack : (string -> string) -> t -> string
+  val fields : string list
+  val default_fields : string list
+
 end
+
+module No = struct
+  type t = unit
+
+  let default = ()
+
+  let pp _ _ = "()"
+  let pp_v _ = "()"
+  let tr _ = ()
+  let pp_norm _ = "()"
+
+  let eq _ _ = true
+  let compare _ _ = 0
+
+    let dump_pack _ _ = "()"
+    let fields = []
+    let default_fields = []
+
+end
+
+module ASL = No

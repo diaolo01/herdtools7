@@ -29,8 +29,10 @@ module type S = sig
 
   type scalar
   type pteval
+  type blockval
+  type tableval
   type instr
-  type cst = (scalar, pteval, instr) Constant.t
+  type cst = (scalar, pteval, blockval, tableval, instr) Constant.t
 
   (* Specific operations *)
   val do_op : op -> cst -> cst -> cst option
@@ -61,6 +63,8 @@ module No (Cst : Constant.S) :
   S
     with type scalar = Cst.Scalar.t
      and type pteval = Cst.PteVal.t
+     and type blockval = Cst.BlockVal.t
+     and type tableval = Cst.TableVal.t
      and type instr = Cst.Instr.t
      and type extra_op = no_extra_op
      and type 'a constr_op = 'a no_constr_op
@@ -79,8 +83,10 @@ module No (Cst : Constant.S) :
 
   type scalar = Cst.Scalar.t
   type pteval = Cst.PteVal.t
+  type blockval = Cst.BlockVal.t
+  type tableval = Cst.TableVal.t
   type instr = Cst.Instr.t
-  type cst = (scalar, pteval, instr) Constant.t
+  type cst = (scalar, pteval, blockval, tableval, instr) Constant.t
 
   let do_op _ _ _ = None
   let do_op1 _ _ = None
@@ -100,8 +106,10 @@ module type S1 = sig
 
   type scalar
   type pteval
+  type blockval
+  type tableval
   type instr
-  type cst = (scalar, pteval, instr) Constant.t
+  type cst = (scalar, pteval, blockval, tableval, instr) Constant.t
 
   val do_op1 : op1 -> cst -> cst option
   val shift_address_right : string -> scalar -> cst option

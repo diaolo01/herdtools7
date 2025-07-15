@@ -80,8 +80,10 @@ let mk_lab (p, l) = Label (p, l)
 %token ATOMIC
 %token ATOMICINIT
 %token ATTRS TOK_OA
-%token TOK_PTE TOK_PA
+%token TOK_PTE TOK_PA TOK_TTD
 %token TOK_TAG
+%token TOK_PTE_DESCR TOK_BLOCK_DESCR TOK_TABLE_DESCR
+%token LEVEL_LV2 LEVEL_LV3 STAGE_S1 STAGE_S2
 %token TOK_NOP
 %token <string> INSTR
 %token <int * string> LABEL
@@ -95,6 +97,8 @@ let mk_lab (p, l) = Label (p, l)
 
 %type <ParsedPteVal.t> pteval
 %start pteval
+%type <ParsedPteVal.t> blockval
+%type <ParsedPteVal.t> tableval
 %type <MiscParser.state> init
 %start init
 %type <MiscParser.location> main_location
@@ -124,6 +128,10 @@ location_global:
 | NAME { Constant.mk_sym $1 }
 | TOK_PTE LPAR NAME RPAR { Constant.mk_sym_pte  $3 }
 | TOK_PTE LPAR TOK_PTE LPAR NAME RPAR RPAR { Constant.mk_sym_pte2 $5 }
+| TOK_TTD LPAR name=NAME COMMA s=stage COMMA l=level RPAR
+    { Constant.mk_sym_ttd name s l }
+| TOK_TTD LPAR name=NAME COMMA l=level RPAR
+    { Constant.mk_sym_ttd name S1 l }  (* default stage 1 *)
 | TOK_PA LPAR NAME RPAR { Constant.mk_sym_pa $3 }
 | NAME COLON NAME { mk_sym_tag $1 $3 }
 | TOK_TAG LPAR id=NAME RPAR { mk_sym_tagloc_zero id }
@@ -158,6 +166,21 @@ prop_head:
 
 pteval:
 | LPAR pteval=prop_head RPAR { pteval }
+| TOK_PTE_DESCR COLON LPAR pteval=prop_head RPAR { pteval }
+
+blockval:
+| TOK_BLOCK_DESCR COLON LPAR blockval=prop_head RPAR { blockval } //todo
+
+tableval:
+| TOK_TABLE_DESCR LPAR tableval=prop_head RPAR { tableval } //todo
+
+stage:
+| STAGE_S1 { S1 }
+| STAGE_S2 { S2 }
+
+level:
+| LEVEL_LV2 { LV2 }
+| LEVEL_LV3 { LV3 }
 
 maybev_notag:
 | NUM  { Concrete $1 }
@@ -253,9 +276,13 @@ atom_init:
 | STAR loc=left_loc { (loc,(TyDefPointer,ParsedConstant.zero))}
 | STAR loc=left_loc EQUAL amperopt v=maybev { (loc,(TyDefPointer,v))}
 | typ=NAME loc=left_loc EQUAL v=pteval
-  { (loc,(Ty typ, MiscParser.add_oa_if_none loc v)) }
+  { (loc, (Ty typ, MiscParser.add_oa_if_none loc v)) }
 | loc=left_loc EQUAL v=pteval
-  { (loc,(Ty "pteval_t", MiscParser.add_oa_if_none loc v)) }
+  { (loc, (Ty "pteval_t", MiscParser.add_oa_if_none loc v)) }
+| loc=left_loc EQUAL v=blockval
+  { (loc, (Ty "blockval_t", MiscParser.add_oa_if_none_block loc v)) }
+| loc=left_loc EQUAL v=tableval
+  { (loc, (Ty "tableval_t", MiscParser.add_oa_if_none_table loc v)) }
 
 amperopt:
 | AMPER { () }

@@ -1,0 +1,16 @@
+AArch64 MLPT001
+Variant=vmsa
+{
+uint64_t x; uint64_t y; uint64_t 0:X9;
+0:X2=x; 0:X3=y;
+0:X4=PTE(x);
+[TTD(x,S1,LV2)]=blockval_t:(oa:PA(x));
+0:X1 = TTD(x,S1, LV2);
+}
+P0           ;
+LDR X7, [X3] ;
+STR X1, [X4] ;
+LDR X8, [X2] ;
+L0:
+ LDR X9, [X3];
+exists (0:X9=1)

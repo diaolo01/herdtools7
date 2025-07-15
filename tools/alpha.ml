@@ -205,6 +205,7 @@ struct
     | Symbolic (Physical _|TagAddr _|System (TLB,_))
     | Frozen _
       -> assert false
+    | _ -> assert false (*todo*)
 
 
     let rec map_value f v = match v with
@@ -222,6 +223,7 @@ struct
     | Instruction _ -> noinstr_value ()
     | Frozen _|Symbolic (Physical _|TagAddr _|System (TLB,_))
       -> assert false
+    | _ -> assert false (*todo*)
 
 
     let collect_pseudo f =

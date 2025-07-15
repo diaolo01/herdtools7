@@ -71,12 +71,22 @@ rule token = parse
 | "filter" { FILTER }
 | "fault"|"Fault" { FAULT }
 | "tag"|"TAG" { TOK_TAG }
-(* Distinguished  PteVal fields *)
+(* Distinguished  descriptor fields *)
 | "attrs"|"Attrs" { ATTRS }
 | "oa" { TOK_OA }
-(* PTW keywords *)
-| "PTE"|"TTD" { TOK_PTE }
+(* Descriptor keywords *)
+| "PTE" { TOK_PTE }
+| "TTD" { TOK_TTD }
+| "pteval_t" {TOK_PTE_DESCR}
+| "blockval_t" {TOK_BLOCK_DESCR}
+| "tableval_t" {TOK_TABLE_DESCR}
 | "PA"  { TOK_PA }
+(* Descriptor level *)
+| "LV2" { LEVEL_LV2 }
+| "LV3" { LEVEL_LV3 }
+(* Translation stages - enables future expansion of herd to stage 2 *)
+| "S1" { STAGE_S1 }
+(* | "S2" { STAGE_S2 } *)
 (* Typing *)
 | "_Atomic" { ATOMIC }
 | "ATOMIC_INIT" { ATOMICINIT }

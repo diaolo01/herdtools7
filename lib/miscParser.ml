@@ -283,14 +283,40 @@ let add_oa_if_none loc p =
   try
     let oa =
       match loc with
-      | Location_global (Symbolic (System (Constant.PTE,s))) ->
-         OutputAddress.PHY s
-      | Location_global (Symbolic (System (Constant.PTE2,s))) ->
-         OutputAddress.PTE s
+      | Location_global (Symbolic (System (Constant.PTE,s)))
+      | Location_global (Symbolic (System (Constant.TTD {stage = S1; level = LV3}, s)))
+        -> OutputAddress.PHY s
+      | Location_global (Symbolic (System (Constant.PTE2,s)))
+      | Location_global (Symbolic (System (Constant.TTD {stage = S1; level = LV2}, s)))
+        -> OutputAddress.PTE s
       | _ -> raise Exit in
     let p = ParsedPteVal.add_oa_if_none oa p in
     Constant.PteVal p
   with Exit -> PteVal p
+
+let add_oa_if_none_block loc p =
+  let open Constant in
+  try
+    let oa =
+      match loc with
+      | Location_global (Symbolic (System (Constant.TTD {stage = S1; level = LV2}, s))) ->
+         OutputAddress.PHY s
+      | _ -> raise Exit in
+    let p = ParsedPteVal.add_oa_if_none oa p in
+    Constant.BlockVal p
+  with Exit -> BlockVal p
+
+let add_oa_if_none_table loc p =
+  let open Constant in
+  try
+    let oa =
+      match loc with
+      | Location_global (Symbolic (System (Constant.TTD {stage = S1; level = LV2}, s))) ->
+         OutputAddress.PTE s
+      | _ -> raise Exit in
+    let p = ParsedPteVal.add_oa_if_none oa p in
+    Constant.TableVal p
+  with Exit -> TableVal p
 
 let mk_instr_val v =
   let open InstrLit in

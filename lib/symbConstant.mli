@@ -19,7 +19,12 @@
 module Make :
 functor (Scalar:Scalar.S) ->
   functor (PteVal:PteVal.S) ->
-    functor (Instr:Instr.S) ->
-    Constant.S
-    with module Scalar = Scalar and module PteVal = PteVal
-    and module Instr = Instr
+    functor (BlockVal:BlockVal.S) ->
+      functor (TableVal:TableVal.S) ->
+        functor (Instr:Instr.S) ->
+          Constant.S
+        with module Scalar = Scalar
+        and module PteVal = PteVal
+        and module BlockVal = BlockVal
+        and module TableVal = TableVal
+        and module Instr = Instr

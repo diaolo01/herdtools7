@@ -86,6 +86,7 @@ module type S = sig
       init : (arch_reg * V.v) list ;
       addrs : string list ; (* addesses in code (eg X86) *)
       ptes : string list ;  (* pte in code (eg X86) *)
+      pmds : string list;
       stable : arch_reg list; (* stable registers, ie must be self-allocated by gcc *)
       final : arch_reg list ;
       code : ins list;
@@ -103,7 +104,7 @@ module type S = sig
   val has_asmhandler : t -> bool
   val get_addrs_only : t -> string list
   val get_phys_only : t -> string list
-  val get_addrs : t -> string list * string list (* addresses X ptes *)
+  val get_addrs : t -> string list * string list * string list (* addresses X ptes X pmds *)
   val get_labels : t -> Label.Full.full list
   val get_instructions : t -> V.Instr.t list
   val fmt_reg : arch_reg -> string
@@ -177,6 +178,7 @@ module Make(O:Config)(A:I) =
         init : (arch_reg * V.v) list ;
         addrs : string list ;
         ptes : string list ;
+        pmds : string list ;
         stable : arch_reg list;
         final : arch_reg list ;
         code : ins list;
@@ -212,7 +214,7 @@ module Make(O:Config)(A:I) =
                   | ConcreteRecord vs ->
                     StringMap.fold_values f vs k
                   |Concrete _|Label _|Tag _
-                  |PteVal _|Instruction _|Frozen _
+                  |PteVal _|BlockVal _|TableVal _|Instruction _|Frozen _
                    -> k in
                   f v k)
                 [] init)) in
@@ -229,8 +231,16 @@ module Make(O:Config)(A:I) =
       get_gen
         (function
           | System (PTE,s) -> Some s
+          | System (TTD {stage=S1; level=LV3}, s) -> Some s
           | _ -> None)
         init ptes
+
+    let get_pmds_only {init; pmds; _} =
+      get_gen
+        (function
+          | System (TTD {stage=S1; level=LV2}, s) -> Some s
+          | _ -> None)
+        init pmds
 
     let get_phys_only {init; _} =
       get_gen
@@ -240,7 +250,7 @@ module Make(O:Config)(A:I) =
         init []
 
     let get_addrs t =
-      get_addrs_only t,get_ptes_only t
+      get_addrs_only t,get_ptes_only t, get_pmds_only t
 
     let get_constants get {init;_} =
       let rec f v k = match v with

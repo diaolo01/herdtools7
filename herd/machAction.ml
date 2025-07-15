@@ -100,11 +100,12 @@ end = struct
     | Symbolic (Physical _) -> Access.PHY
     | Symbolic (TagAddr _) -> Access.TAG
     | Symbolic (System ((PTE|PTE2),_)) -> Access.PTE
+    | Symbolic (System (TTD _,_)) -> Access.TTD
     | Symbolic (System (TLB,_)) -> Access.TLB
     | Label _ -> Access.VIR
     | Tag _
     | ConcreteVector _|Concrete _|ConcreteRecord _
-    | PteVal _|Instruction _|Frozen _ as v
+    | PteVal _|BlockVal _|TableVal _|Instruction _|Frozen _ as v
       ->
        Warn.fatal "access_of_constant %s as an address"
          (V.pp_v (V.Val v)) (* assert false *)
@@ -294,6 +295,19 @@ end = struct
      begin
        match A.ArchAction.location_of a with
        | Some (A.Location_global (A.V.Val c)) -> Constant.is_pt c
+       | _ -> false
+     end
+  | _ -> false
+
+  (*todo: placeholder for alias_act*)
+  let is_desc a = match a with
+  | Access (_,A.Location_global (A.V.Val c),_,_,_,_,_)
+  | Amo (A.Location_global (A.V.Val c),_,_,_,_,_,_)
+    -> Constant.is_desc c
+  | Arch a ->
+     begin
+       match A.ArchAction.location_of a with
+       | Some (A.Location_global (A.V.Val c)) -> Constant.is_desc c
        | _ -> false
      end
   | _ -> false
@@ -585,6 +599,8 @@ end = struct
       (cutoff_set::bsets @ cmo_sets @ asets @ esets
        @ lsets @ aasets @ ifetch_sets @ fault_sets @ tlbi_sets)
 
+(*todo, unify all descriptors in a single type, placeholder for now*)
+
   let arch_rels =
     if kvm then
 
@@ -596,10 +612,25 @@ end = struct
              let open Constant in
              begin
                match A.symbol loc with
-               | Some (System (PTE,_)) -> true
+               | Some (System (PTE,_))
+               | Some (System (TTD {stage = S1; level = LV3},_))
+                   -> true
                | _ -> false
              end
           | None -> false in
+
+        (* let is_pmd_loc act =
+          match location_of act with
+          | Some loc ->
+             let open Constant in
+             begin
+               match A.symbol loc with
+               | Some (System (TTD {stage = S1; level = LV2},_)) -> true
+               | _ -> false
+             end
+          | None -> false in *)
+
+          (*todo: invalidate TTDs*)
 
         let inv_domain_sym a1 a2 =
           let open Constant in
@@ -634,15 +665,17 @@ end = struct
           let open Constant in
           function
           | Some (A.V.Val (PteVal v)) -> Some v
-          | Some
-              (A.V.Val
-                 (ConcreteVector _|Concrete _|Symbolic _|ConcreteRecord _
-                  |Label (_, _)|Tag _|Instruction _
-                  |Frozen _))
-          | None
-            -> None
-          | Some (A.V.Var _) ->
-              Warn.fatal "Cannot decide alias on variables"
+          | _ -> None in
+        let get_blockval =
+          let open Constant in
+          function
+          | Some (A.V.Val (BlockVal v)) -> Some v
+          | _ -> None in
+        let get_tableval =
+          let open Constant in
+          function
+          | Some (A.V.Val (TableVal v)) -> Some v
+          | _ -> None
         and is_amo = function
           | Amo _ -> true
           | _ -> false in
@@ -652,10 +685,18 @@ end = struct
           that relies on event values.
           Reason: RWM events have two values.. *)
           assert (not (is_amo act1 || is_amo act2)) ;
-          is_pt act1 && is_pt act2 &&
-          (match get_pteval (value_of act1), get_pteval (value_of act2) with
-          | Some s1,Some s2 -> A.V.Cst.PteVal.same_oa s1 s2
-          | _,_ -> false) in
+          is_desc act1 && is_desc act2 &&
+          match value_of act1, value_of act2 with
+          | v1, v2 ->
+              (match get_pteval v1, get_pteval v2 with
+              | Some p1, Some p2 -> A.V.Cst.PteVal.same_oa p1 p2
+              | _ ->
+                  match get_blockval v1, get_blockval v2 with
+                  | Some b1, Some b2 -> A.V.Cst.BlockVal.same_oa b1 b2
+                  | _ ->
+                      match get_tableval v1, get_tableval v2 with
+                      | Some t1, Some t2 -> A.V.Cst.TableVal.same_oa t1 t2
+                      | _ -> false) in
 
       [("inv-domain",inv_domain_act); ("alias",alias_act);]
     else []

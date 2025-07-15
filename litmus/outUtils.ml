@@ -35,6 +35,11 @@ let fmt_pte_kvm x = sprintf "_vars->%s" (fmt_pte_tag x)
 let fmt_phy_tag x = "saved_" ^ Misc.add_pte x
 let fmt_phy_kvm x = sprintf "_vars->%s" (fmt_phy_tag x)
 
+let fmt_pmd_tag x = Misc.add_pmd x
+let fmt_pmd_kvm x = sprintf "_vars->%s" (fmt_pmd_tag x)
+let fmt_phy_pmd_tag x = "saved_" ^ Misc.add_pmd x
+let fmt_phy_pmd_kvm x = sprintf "_vars->%s" (fmt_phy_pmd_tag x)
+
 (* Value (address) output *)
 module type Config = sig
   val memory : Memory.t
@@ -65,6 +70,8 @@ module Make(O:Config)(V:Constant.S) = struct
   | Symbolic _
   | Label _
   | PteVal _
+  | BlockVal _
+  | TableVal _
   | Frozen _
     -> assert false
 

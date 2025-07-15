@@ -149,5 +149,7 @@ val get_info_on_info : string -> (string * string) list -> string option
 val get_info :  ('i, 'p, 'c, 'loc, 'v, 'ftype) result -> string -> string option
 
 val add_oa_if_none : location -> ParsedPteVal.t -> maybev
+val add_oa_if_none_block : location -> ParsedPteVal.t -> maybev
+val add_oa_if_none_table : location -> ParsedPteVal.t -> maybev
 
-val mk_instr_val : string option -> ('scalar,'pte,InstrLit.t) Constant.t
+val mk_instr_val : string option -> ('scalar,'pte,'block,'table,InstrLit.t) Constant.t

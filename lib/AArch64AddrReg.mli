@@ -2,9 +2,9 @@
 (*                           the diy toolsuite                              *)
 (*                                                                          *)
 (* Jade Alglave, University College London, UK.                             *)
-(* Luc Maranget, INRIA Paris-Rocquencourt, France.                          *)
+(* Luc Maranget, INRIA Paris, France.                                       *)
 (*                                                                          *)
-(* Copyright 2024-present Institut National de Recherche en Informatique et *)
+(* Copyright 2020-present Institut National de Recherche en Informatique et *)
 (* en Automatique, ARM Ltd and the authors. All rights reserved.            *)
 (*                                                                          *)
 (* This software is governed by the CeCILL-B license under French law and   *)
@@ -14,15 +14,19 @@
 (* "http://www.cecill.info". We also give a copy in LICENSE.txt.            *)
 (****************************************************************************)
 
-module Make (C : sig
-  val is_morello : bool
-end) : Value.AArch64 = struct
-  module AArch64Instr = AArch64Instr.Make (C)
-  module AArch64Cst =
-    SymbConstant.Make (SVEScalar) (AArch64PteVal) (AArch64BlockVal) (AArch64TableVal) (AArch64Instr)
-  module NoCst =
-    SymbConstant.Make (SVEScalar) (PteVal.No) (BlockVal.No) (TableVal.No) (AArch64Instr)
-  module NoArchOp = ArchOp.No(NoCst)
-  module AArch64Op = AArch64Op.Make (SVEScalar)(NoArchOp)
-  include SymbValue.Make (AArch64Cst) (AArch64Op)
-end
+type t = { oa : OutputAddress.t; f : int; }
+
+val eq : t -> t -> bool
+val compare : t -> t -> int
+
+val default : t
+
+val tr : ParsedAddrReg.t -> t
+val pp_norm : ParsedAddrReg.t -> string
+
+val pp : 'a -> t -> string
+val pp_v : t -> string
+
+val dump_pack : (string -> string) -> t -> string
+val fields : string list
+val default_fields : string list

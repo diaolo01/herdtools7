@@ -28,6 +28,10 @@ static inline pteval_t *litmus_tr_pte(void *p) {
   return follow_pte(mmu_idmap, (uintptr_t)p);
 }
 
+static inline pmdval_t *litmus_tr_pmd(void *p) {
+  return follow_pmd(mmu_idmap, (uintptr_t)p);
+}
+
 static inline void litmus_flush_tlb(void *p) {
   flush_tlb_page((unsigned long)p);
 }
@@ -36,8 +40,8 @@ static inline void litmus_flush_tlb_all(void) {
   flush_tlb_all();
 }
 
-static inline pteval_t litmus_set_pte(pteval_t *p,pteval_t v) {
-  pteval_t w;
+static inline uint64_t litmus_set_val_u64(uint64_t *p, uint64_t v) {
+  uint64_t w;
 #ifdef NOSWP
   int t;
   asm __volatile (
@@ -60,13 +64,13 @@ static inline pteval_t litmus_set_pte(pteval_t *p,pteval_t v) {
 
 static const uint64_t msk_valid = 0x1UL;
 
-/* Safe pte update, with BBM sequence */
-static inline pteval_t litmus_set_pte_safe(void *p,pteval_t *q,pteval_t v) {
-  pteval_t w = v & ~msk_valid ;
-  pteval_t r = litmus_set_pte(q,w);
-  litmus_flush_tlb(p);
-  (void)litmus_set_pte(q,v); /* Last flush_tlb to be performed explicitly */
-  return r ;
+/* Safe descriptor update, with BBM sequence */
+static inline uint64_t litmus_set_descriptor_safe(void *p, uint64_t *q, uint64_t v) {
+    uint64_t w = v & ~msk_valid;
+    uint64_t r = litmus_set_val_u64(q, w);
+    litmus_flush_tlb(p);
+    (void)litmus_set_val_u64(q, v);  /* Last flush_tlb to be performed explicitly */
+    return r;
 }
 
 /* Field access */
@@ -78,8 +82,8 @@ static inline uint64_t litmus_get_field(pteval_t x,int low,int sz) {
   return y & mask;
 }
 
-static inline pteval_t litmus_set_field(pteval_t old,int low,int sz,pteval_t v) {
-  pteval_t mask = ((((uint64_t)1) << sz)-1) ;
+static inline uint64_t litmus_set_field(uint64_t old,int low,int sz,uint64_t v) {
+  uint64_t mask = ((((uint64_t)1) << sz)-1) ;
   v &= mask ; v <<= low ;
   mask <<= low ;
   old &= ~mask ;
@@ -99,25 +103,60 @@ static inline int litmus_same_oa(pteval_t p,pteval_t q) {
   return ((p ^ q) & FULL_MASK) == 0 ;
 }
 
-static inline pteval_t litmus_set_pte_invalid(pteval_t old) {
+
+// Invalidate descriptors
+static inline uint64_t litmus_set_descr_invalid(uint64_t old) {
   return old & ~msk_valid ;
+}
+
+static inline pteval_t litmus_set_pte_invalid(pteval_t old) {
+  return (pteval_t)litmus_set_descr_invalid((uint64_t)old);
+}
+
+static inline pmdval_t litmus_set_pmd_invalid(pmdval_t old) {
+  return (pmdval_t)litmus_set_descr_invalid((uint64_t)old);
 }
 
 static const uint64_t msk_af = 0x400UL;
 static const uint64_t msk_dbm = 0x8000000000000UL;
 static const uint64_t msk_db = 0x80UL;
 static const uint64_t msk_el0 = 0x40UL;
-#define  msk_full (msk_valid|msk_af|msk_dbm|msk_db|msk_el0)
+static const uint64_t msk_desc_type = 0x3UL;
+
+#define  msk_flags (msk_valid|msk_af|msk_dbm|msk_db|msk_el0)
 
 static inline void unset_el0(pteval_t *p) {
   *p &= ~msk_el0;
 }
 
-static inline pteval_t litmus_set_pte_flags(pteval_t old,pteval_t flags) {
+typedef enum {
+    DESC_TYPE_FAULT = 0x0,
+    DESC_TYPE_BLOCK = 0x1,
+    DESC_TYPE_TABLE = 0x3
+} desc_type_t;
+
+static inline pmdval_t litmus_set_type(uint64_t old, desc_type_t type) {
+  return (old & ~msk_desc_type) | type ;
+}
+
+static inline uint64_t litmus_set_flags(uint64_t old,uint64_t flags) {
+
   flags ^= msk_db; /* inverse dirty bit -> AF[2] */
-  old &= ~msk_full ;
-  old |= flags ;
+  old &= ~msk_flags ;
+
+  if ((old & msk_desc_type) == DESC_TYPE_TABLE)
+        old |= (flags & msk_valid);  // allow only valid bit
+  else old |= flags;                 // allow all for block/page
+
   return old ;
+}
+
+static inline pteval_t litmus_set_pte_flags(pteval_t old, pteval_t flags) {
+  return (pteval_t)litmus_set_flags((uint64_t)old, (uint64_t)flags);
+}
+
+static inline pmdval_t litmus_set_pmd_flags(pmdval_t old, pmdval_t flags) {
+  return (pmdval_t)litmus_set_flags((uint64_t)old, (uint64_t)flags);
 }
 
 /* Some 'explicit' PTE attributes */
@@ -134,19 +173,19 @@ typedef enum
     attr_Device_GRE,
     attr_Device_nGnRE,
     attr_Device_nGnRnE
-  } pte_attr_key;
+  } descriptor_attr_key;
 
 /* Act on SH[1:0] ie bits [9:8] */
-static inline pteval_t litmus_set_sh(pteval_t old,pteval_t sh) {
+static inline uint64_t litmus_set_sh(uint64_t old,uint64_t sh) {
   return litmus_set_field(old,8,2,sh);
 }
 
 /* Act on MEMATTR[3:0] ie bits [5:2] */
-static inline pteval_t litmus_set_memattr(pteval_t old,pteval_t memattr) {
+static inline uint64_t litmus_set_memattr(uint64_t old,uint64_t memattr) {
   return litmus_set_field(old,2,4,memattr);
 }
 
-static inline void litmus_set_pte_attribute(pteval_t *p,pte_attr_key k) {
+static inline void litmus_set_descriptor_attribute(uint64_t *p,descriptor_attr_key k) {
   switch (k) {
   case attr_NSH:
     *p = litmus_set_sh(*p,0) ;
@@ -183,6 +222,14 @@ static inline void litmus_set_pte_attribute(pteval_t *p,pte_attr_key k) {
     *p = litmus_set_memattr(*p, MT_DEVICE_GRE);
     break;
   }
+}
+
+static inline void litmus_set_pte_attribute(pteval_t *p, descriptor_attr_key k) {
+  litmus_set_descriptor_attribute((uint64_t *)p, k);
+}
+
+static inline void litmus_set_pmd_attribute(pmdval_t *p, descriptor_attr_key k) {
+  litmus_set_descriptor_attribute((uint64_t *)p, k);
 }
 
 /* Packed pte */

@@ -118,7 +118,7 @@ module Make(O:Config)(I:I) : S with module I = I
     match c with
     | Symbolic sym -> Global_litmus.tr_symbol sym
     | Tag _|Concrete _|ConcreteVector _|ConcreteRecord _
-    | Label _|PteVal _|Instruction _
+    | Label _|PteVal _|BlockVal _| TableVal _|Instruction _
     | Frozen _
       ->
        Warn.fatal "Constant %s cannot be translated to a litmus adress"
@@ -145,7 +145,10 @@ module Make(O:Config)(I:I) : S with module I = I
     | Location_reg (proc,reg) -> Out.dump_out_reg proc reg
     | Location_global (G.Addr s) -> s
     | Location_global (G.Pte s) -> Misc.add_pte s
+    | Location_global (G.Ttd {stage=G.Stage1;level=G.Lv3;s}) -> Misc.add_pte s
+    | Location_global (G.Ttd {stage=G.Stage1;level=G.Lv2;s}) -> Misc.add_pmd s
     | Location_global (G.Phy _)
+    | Location_global (G.Ttd _)
       -> assert false
 
   let dump_rloc_tag =

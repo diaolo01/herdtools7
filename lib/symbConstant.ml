@@ -17,16 +17,20 @@
 module Make
          (Scalar:Scalar.S)
          (PteVal:PteVal.S)
+         (BlockVal:BlockVal.S)
+         (TableVal:TableVal.S)
          (Instr:Instr.S) = struct
 
   module Scalar = Scalar
   module PteVal = PteVal
+  module BlockVal = BlockVal
+  module TableVal = TableVal
   module Instr = Instr
 
-  type v = (Scalar.t,PteVal.t,Instr.t) Constant.t
+  type v = (Scalar.t,PteVal.t,BlockVal.t,TableVal.t,Instr.t) Constant.t
   open Constant
 
-  let tr c = Constant.map Scalar.of_string PteVal.tr Instr.tr c
+  let tr c = Constant.map Scalar.of_string PteVal.tr BlockVal.tr TableVal.tr Instr.tr c
 
   let intToV i = Concrete (Scalar.of_int i)
   and nameToV s = Constant.mk_sym s
@@ -54,28 +58,29 @@ module Make
   let pp_instr_cst i = Instr.pp i
 
   let pp hexa =
-    Constant.pp (Scalar.pp hexa) (PteVal.pp hexa) pp_instr_cst
+    Constant.pp (Scalar.pp hexa) (PteVal.pp hexa) (BlockVal.pp hexa) (TableVal.pp hexa) pp_instr_cst
   and pp_unsigned hexa =
-    Constant.pp (Scalar.pp_unsigned hexa) (PteVal.pp hexa) pp_instr_cst
+    Constant.pp (Scalar.pp_unsigned hexa) (PteVal.pp hexa) (BlockVal.pp hexa) (TableVal.pp hexa) pp_instr_cst
 
   let pp_v = pp false
   let pp_v_old =
-    Constant.pp_old (Scalar.pp false) (PteVal.pp false) pp_instr_cst
+    Constant.pp_old (Scalar.pp false) (PteVal.pp false) (BlockVal.pp false) (TableVal.pp false) pp_instr_cst
 
   let compare c1 c2 =
-    Constant.compare Scalar.compare PteVal.compare Instr.compare c1 c2
-  let eq c1 c2 = Constant.eq Scalar.equal PteVal.eq Instr.eq c1 c2
+    Constant.compare Scalar.compare PteVal.compare BlockVal.compare TableVal.compare Instr.compare c1 c2
+  let eq c1 c2 = Constant.eq Scalar.equal PteVal.eq BlockVal.eq TableVal.eq Instr.eq c1 c2
 
 (* For building code symbols. *)
   let vToName = function
     | Symbolic s-> Constant.as_address s
     | Concrete _|ConcreteVector _|ConcreteRecord _| Label _|Tag _
-    | PteVal _|Instruction _|Frozen _
+    | PteVal _| BlockVal _| TableVal _|Instruction _|Frozen _
         -> assert false
 
   let is_nop = function
     | Instruction i -> Instr.is_nop i
-    | Symbolic _|Concrete _|ConcreteRecord _|ConcreteVector _ | Label _|Tag _|PteVal _
+    | Symbolic _|Concrete _|ConcreteRecord _|ConcreteVector _ | Label _|Tag _
+    |PteVal _| BlockVal _| TableVal _
     | Frozen _
       -> false
 
