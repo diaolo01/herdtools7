@@ -41,6 +41,8 @@ module Make (B : ArchBaseHerd) (C : Arch_herd.Config) (V : Value.S) = struct
   let empty_solver = ()
   let pp_solver_state _ = ""
   let add_predicate _ _ = Some ()
+
+  let predicate_to_constants _ = None
   let normalize cst _ = cst
   let compare_solver_state _ _ = 0
 

@@ -1686,9 +1686,14 @@ Monad type:
       | V.Undetermined ->
          (* Not ready yet add equation *)
          delay_op mk_c
-      | V.Constraint (pred,v) ->
-          (* Solve an architecture specific constraint *)
-          make_one_monad v [VC.Predicate (pred)] E.empty_event_structure
+      | V.Constraint (pred, v) ->
+        let cs =
+            match A.predicate_to_constants pred with
+            | Some (c1,c2,_) ->
+                [VC.Assign (V.Val c1, VC.Atom (V.Val c2))]
+            | None -> []
+          in
+          make_one_monad v cs E.empty_event_structure
       | exn ->
          if C.debug.Debug_herd.exc then raise exn
          (* Delay failure *)

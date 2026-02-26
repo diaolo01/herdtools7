@@ -576,6 +576,21 @@ module Make (C:Arch_herd.Config)(V:Value.AArch64) =
      * we only compare the equalities of the internal collision solvers *)
       PAC.compare_solver_state s1 s2
 
+
+    let predicate_to_constants pred =
+      let name,is_eq = match pred with
+      | AArch64Op.Eq _ -> "pac_eq", true
+      | AArch64Op.Ne _ -> "pac_neq", false
+      in
+      let make pac =
+        let open Constant in
+        Constant.of_symbolic_data
+          { default_symbolic_data with name; pac }
+      in
+      match pred with
+      | AArch64Op.Eq (p1,p2)
+      | AArch64Op.Ne (p1,p2) -> Some (make p1, make p2, is_eq)
+
     let add_predicate pred st =
       match pred with
       | AArch64Op.Eq (p1,p2) ->

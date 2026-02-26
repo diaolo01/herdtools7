@@ -72,6 +72,8 @@ module Make
 
     let add_predicate _ _ = Some ()
 
+    let predicate_to_constants _ = None
+
     let normalize cst _ = cst
 
     let compare_solver_state _ _ = 0

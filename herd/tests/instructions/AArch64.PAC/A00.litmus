@@ -1,0 +1,8 @@
+AArch64 AUTDZA
+Variant=pauth2,fpac
+{
+  0:X0=x;
+}
+P0         ;
+AUTDZA X0  ;
+forall (~Fault(P0))

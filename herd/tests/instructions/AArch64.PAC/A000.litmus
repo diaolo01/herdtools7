@@ -1,0 +1,11 @@
+AArch64 2AUTDZA
+Variant=pauth2,fpac
+{
+  0:X0=x; 0:X1=x;
+}
+ P0         ;
+L0:         ;
+ AUTDZA X0  ;
+L1:         ;
+ AUTDZA X1  ;
+exists (~fault(P0:L0) /\ fault(P0:L1))

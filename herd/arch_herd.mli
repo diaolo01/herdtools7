@@ -60,6 +60,9 @@ module type S =
 
     val add_predicate : V.arch_pred -> solver_state -> solver_state option
 
+    val predicate_to_constants :
+      V.arch_pred -> (V.Cst.v * V.Cst.v * bool) option
+
     (* Some constraint solvers may support normalisation, for example if the
      * solver contain an Union-Find data structure, then it's possible to
      * normalize the elements of an equivalence class using the representant
